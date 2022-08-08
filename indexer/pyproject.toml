@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "bytes32-indexer"
+version = "0.1.0"
+description = ""
+authors = ["Louis Garoche <louis@garoche.me>"]
+readme = "README.md"
+packages = [{include = "bytes32_indexer"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pysolr = "^3.9.0"
+multiformats = "^0.1.4"
+hexbytes = "^0.2.2"
+requests = "^2.28.1"
+bytes32 = {path = "../core"}
+
+
+[tool.poetry.group.dev.dependencies]
+black = {version = "^22.6.0", allow-prereleases = true}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
