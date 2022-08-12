@@ -77,7 +77,7 @@ optional = false
 python-versions = ">=3.5"
 
 [package.extras]
-tests = ["pytest-flake8", "pytest-cov", "pytest-benchmark", "pytest (>=4.6)", "PyHamcrest (>=2.0.2)", "mypy"]
+tests = ["mypy", "PyHamcrest (>=2.0.2)", "pytest (>=4.6)", "pytest-benchmark", "pytest-cov", "pytest-flake8"]
 
 [[package]]
 name = "bases"
@@ -131,9 +131,10 @@ description = ""
 category = "main"
 optional = false
 python-versions = "^3.8"
-develop = false
+develop = true
 
 [package.dependencies]
+dag-cbor = "^0.2.2"
 pydantic = "^1.9.1"
 requests = "^2.28.1"
 web3 = "^5.30.0"
@@ -849,7 +850,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "91b3b5ad61dc7c8dc4def23ee537a93d4a68bacc52d011b8fe91fde097c23076"
+content-hash = "e2a51a0fcfe8e5ced8aedc4613c33179ee572c797915f48904e4183cf7de1bc3"
 
 [metadata.files]
 aiohttp = [
