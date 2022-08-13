@@ -1,26 +1,27 @@
-from functools import lru_cache
 import os
-import requests
-from bytes32 import w3
-import json
 from datetime import datetime
-import logs
-from multiformats import CID
+from functools import lru_cache
+
 import pysolr
+import requests
+from multiformats import CID
+from web3.auto import w3
+
+from bytes32_indexer import logs
+
+from bytes32.utils import bytes32_events
+from bytes32 import SignedEntry
 
 contract_address = os.getenv("BYTES32_CONTRACT")
 ipfs_api = os.getenv("IPFS_API_URL")
+solr_url = os.getenv("SOLR_URL")
 
 
-solr = pysolr.Solr("http://localhost:8983/solr/bytes32_rinkeby/", always_commit=True)
+solr = pysolr.Solr(solr_url, always_commit=True)
 solr.ping()
 
 latest = w3.eth.get_block("latest")
 print(f"latest block number: {latest.number}")
-
-with open("../contract/out/Bytes32.sol/Bytes32.json", "r") as f:
-    abi = json.load(f)["abi"]
-    bytes32 = w3.eth.contract(address=contract_address, abi=abi)
 
 
 @lru_cache(maxsize=4096)
@@ -44,12 +45,13 @@ def traverse(path):
                 print(f"failed to traverse: {e}")
                 continue
     elif "content" in head_obj:
+        entry = SignedEntry(**head_obj)
         doc = {
             "id": path,
-            "id.pkh": head_obj["id"]["pkh"],
-            "sig": head_obj["sig"],
-            "content.type": head_obj["content"]["type"],
-            "content.data": head_obj["content"]["data"],
+            "signer": entry.signer(),
+            "sig": entry.sig,
+            "content.type": entry.content.type,
+            "content.data": entry.content.data,
         }
         if "ref" in head_obj and "/" in head_obj["ref"]:
             doc["ref"] = head_obj["ref"]["/"]
@@ -85,7 +87,7 @@ def handle_logs(logs):
 
 logs.fetch_logs(
     w3=w3,
-    start_block=11143540,
-    event=bytes32.events.Publication(),  # weth.events.Transfer()
+    start_block=0,
+    event=bytes32_events(w3).Publication(),
     handle_logs=handle_logs,
 )

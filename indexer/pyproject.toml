@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bytes32-indexer"
-version = "0.1.0"
+version = "0.0.1"
 description = ""
 authors = ["Louis Garoche <louis@garoche.me>"]
 readme = "README.md"

@@ -68,3 +68,8 @@ def bytes32_contract(w3: Web3):
         __delattr__ = dict.__delitem__
 
     return dotdict({k: call(k) for k, v in f.items() if callable(v)})
+
+
+def bytes32_events(w3):
+    bytes32 = w3.eth.contract(address=contract_address, abi=abi)
+    return bytes32.events
