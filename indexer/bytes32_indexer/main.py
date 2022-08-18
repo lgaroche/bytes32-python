@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 
 import pysolr
@@ -45,17 +45,22 @@ def traverse(path):
                 print(f"failed to traverse: {e}")
                 continue
     elif "content" in head_obj:
-        entry = SignedEntry(**head_obj)
-        doc = {
-            "id": path,
-            "signer": entry.signer(),
-            "sig": entry.sig,
-            "content.type": entry.content.type,
-            "content.data": entry.content.data,
-        }
-        if "ref" in head_obj and "/" in head_obj["ref"]:
-            doc["ref"] = head_obj["ref"]["/"]
-        docs += [doc]
+        try:
+            entry = SignedEntry(**head_obj)
+            doc = {
+                "id": path,
+                "signer": entry.signer(),
+                "signature.format": entry.signature.format,
+                "signature.schema": entry.signature.signature_schema.link,
+                "signature.sig": entry.signature.sig,
+                "content.type": entry.content.type,
+                "content.text": entry.content.text,
+                "content.data": entry.content.data.link,
+                "ref": entry.ref.link,
+            }
+            docs += [doc]
+        except Exception as e:
+            print(e)
     return docs
 
 
@@ -71,9 +76,9 @@ def handle_logs(logs):
         try:
             docs = traverse(cid)
             block = w3.eth.get_block(log.blockNumber)
-            block_time = datetime.fromtimestamp(block.timestamp).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )
+            block_time = datetime.fromtimestamp(
+                block.timestamp, tz=timezone.utc
+            ).strftime("%Y-%m-%dT%H:%M:%SZ")
             for doc in docs:
                 doc["block.time"] = block_time
                 doc["block.number"] = log.blockNumber

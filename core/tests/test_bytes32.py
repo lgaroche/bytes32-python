@@ -1,3 +1,4 @@
+from curses import meta
 from web3.auto import w3
 from web3.types import TxReceipt
 from eth_account.account import Account
@@ -13,8 +14,9 @@ def test_publish():
     print(w3.clientVersion)
 
     # create and sign entry
-    content = {"type": "text/plain", "data": "this is a test"}
-    entry = Entry(content=content)
+    empty_link = {"/": ""}
+    content = {"type": "text/plain", "text": "this is a test", "data": empty_link}
+    entry = Entry(content=content, meta=empty_link, ref=empty_link)
     signed = entry.sign(account)
     assert signed.signer() == account.address
 
