@@ -19,8 +19,13 @@ private_key = os.getenv("PRIVATE_KEY")
 ipfs_api = os.getenv("IPFS_API_URL")
 
 
+def pin_aggregate(items):
+    aggregate_ctx = {"@context": "https://bytes32.org/contexts/aggregate.jsonId"}
+    return CID.decode(ipfs_add_and_pin({**aggregate_ctx, "items": items}))
+
+
 app = FastAPI()
-heads: Mapping[str, CID] = {}
+last_tx_hashes: Mapping[str, bytes] = {}
 q = queue.Queue()
 
 latest = w3.eth.get_block("latest")
@@ -33,23 +38,22 @@ def aggregate():
     print("start aggregate thread")
     while True:
         empty = q.empty()
+        updates: Mapping[str, CID] = {}
         while not q.empty():
             (pkh, cid) = q.get()
-            heads[pkh] = CID.decode(cid)
+            updates[pkh] = CID.decode(cid)
 
         if not empty:
             aggr_cid = ipfs_add_and_pin(
                 {
-                    "@context": "https://bytes32.org/contexts/aggregate.jsonId",
-                    "heads": heads,
+                    "updates": pin_aggregate(updates),
+                    "last_tx_hashes": pin_aggregate(last_tx_hashes),
                 }
             )
             print(f"new aggregate cid: {aggr_cid}")
-
             digest = CID.decode(aggr_cid).raw_digest.hex()
-            print(digest)
-
-            bytes32_contract(w3).publish(account, head=HexBytes(digest))
+            receipt = bytes32_contract(w3).publish(account, head=HexBytes(digest))
+            last_tx_hashes[pkh] = receipt.transactionHash
 
         time.sleep(2)
 

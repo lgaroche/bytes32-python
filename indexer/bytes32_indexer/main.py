@@ -25,43 +25,69 @@ print(f"latest block number: {latest.number}")
 
 
 @lru_cache(maxsize=4096)
-def get_dag(cid):
-    url = f"{ipfs_api}/dag/get?arg={cid}"
+def get_dag(path):
+    url = f"{ipfs_api}/dag/get?arg={path}"
     r = requests.post(url, headers={"Accept": "application/json"})
     if r.status_code != 200:
-        print(f"failed to read from ipfs (status={r.status_code}): {cid}")
+        print(f"failed to read from ipfs (status={r.status_code}): {path}")
         raise Exception
     return r.json()
 
 
-def traverse(path):
-    head_obj = get_dag(path)
-    docs = []
-    if "heads" in head_obj:
-        for h in head_obj["heads"]:
+def resolve_dag(path):
+    url = f"{ipfs_api}/dag/resolve?arg={path}"
+    r = requests.post(url, headers={"Accept": "application/json"})
+    if r.status_code != 200:
+        print(f"failed to read from ipfs (status={r.status_code}): {path}")
+        raise Exception
+    return CID.decode(r.json()["Cid"]["/"])
+
+
+def read_updates(path):
+    visited = []
+
+    def read_inner(path):
+        cid = resolve_dag(path)
+
+        # do not loop into repeated paths
+        if cid in visited:
+            return []
+
+        dag = get_dag(cid)
+        docs = []
+        if "updates" in dag:
             try:
-                docs += traverse(head_obj["heads"][h]["/"])
+                docs += read_inner(f"{path}/updates")
             except Exception as e:
-                print(f"failed to traverse: {e}")
-                continue
-    elif "content" in head_obj:
-        try:
-            entry = SignedEntry(**head_obj)
-            doc = {
-                "id": path,
-                "signer": entry.signer(),
-                "signature.format": entry.signature.format,
-                "signature.schema": entry.signature.signature_schema.link,
-                "signature.sig": entry.signature.sig,
-                "content.type": entry.content.type,
-                "content.text": entry.content.text,
-                "content.data": entry.content.data.link,
-                "ref": entry.ref.link,
-            }
-            docs += [doc]
-        except Exception as e:
-            print(e)
-    return docs
+                print(f"failed to read updates in {path}")
+                print(e)
+        elif "items" in dag:
+            for item in dag["items"]:
+                try:
+                    docs += read_inner(f"{path}/items/{item}")
+                except Exception as e:
+                    print(f"failed to read updates in {path}/items/{item}")
+                    continue
+        elif "content" in dag:
+            try:
+                entry = SignedEntry(**dag)
+                doc = {
+                    "id": str(cid),
+                    "signer": entry.signer(),
+                    "signature.format": entry.signature.format,
+                    "signature.schema": entry.signature.signature_schema.link,
+                    "signature.sig": entry.signature.sig,
+                    "content.type": entry.content.type,
+                    "content.text": entry.content.text,
+                    "content.data": entry.content.data.link,
+                    "ref": entry.ref.link,
+                }
+                docs += [doc]
+            except Exception as e:
+                print(e)
+        return docs
+
+    return read_inner(path)
 
 
 def handle_logs(logs):
@@ -74,7 +100,7 @@ def handle_logs(logs):
         print(f"new head for: {key} => {cid}")
 
         try:
-            docs = traverse(cid)
+            docs = read_updates(cid)
             block = w3.eth.get_block(log.blockNumber)
             block_time = datetime.fromtimestamp(
                 block.timestamp, tz=timezone.utc
