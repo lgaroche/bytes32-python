@@ -1,4 +1,3 @@
-from curses import meta
 from web3.auto import w3
 from web3.types import TxReceipt
 from eth_account.account import Account

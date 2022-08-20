@@ -6,6 +6,7 @@ import requests
 from web3 import Web3
 from eth_account import Account
 from web3.exceptions import TransactionNotFound
+from multiformats import CID
 
 from bytes32.abi import abi
 
@@ -25,7 +26,13 @@ def ipfs_add_and_pin(obj):
 
 
 def bytes32_contract(w3: Web3):
-    """Access contract functions, sign and send them directly with a local private key"""
+    """
+    Access contract functions, call views or send transactions with a local private key (eth_account.Account)
+    Usage:
+        * for views: bytes32_contract(w3).function_name(args).call()
+        * for sends: bytes32_contract(w3).function_name(args).send(account)
+    """
+
     bytes32 = w3.eth.contract(address=contract_address, abi=abi)
     f = vars(bytes32.functions)
 
@@ -39,6 +46,8 @@ def bytes32_contract(w3: Web3):
                 "nonce": nonce,
             }
         )
+        estimation = w3.eth.estimate_gas(tx)
+        print(f"gas estimation: {estimation}")
         signed_tx = account.sign_transaction(tx)
         res = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
         print(f"sent transaction: {w3.toHex(res)}")
@@ -47,15 +56,30 @@ def bytes32_contract(w3: Web3):
         while receipt is None:
             try:
                 receipt = w3.eth.get_transaction_receipt(res)
+                if receipt.status == 0:
+                    raise Exception("transaction failed")
                 print(f"transaction was included in block {receipt.blockNumber}")
                 return receipt
             except TransactionNotFound:
                 time.sleep(5)
 
-    def call(fun):
+    def send(fun):
         return lambda account, *args, **kwargs: sign_and_send(
             account, fun, *args, **kwargs
         )
+
+    def call(fun):
+        def callsend(*args, **kwargs):
+            return dotdict(
+                {
+                    "call": lambda: bytes32.functions[fun](*args, **kwargs).call(),
+                    "send": lambda account: sign_and_send(
+                        account, fun, *args, **kwargs
+                    ),
+                }
+            )
+
+        return lambda *args, **kwargs: callsend(*args, **kwargs)
 
     class dotdict(dict):
         """
@@ -73,3 +97,8 @@ def bytes32_contract(w3: Web3):
 def bytes32_events(w3):
     bytes32 = w3.eth.contract(address=contract_address, abi=abi)
     return bytes32.events
+
+
+def last_head_cid(w3: Web3, address: str):
+    b = bytes32_contract(w3).heads(address).call()
+    return CID("base32", 1, "dag-cbor", ("sha2-256", b))

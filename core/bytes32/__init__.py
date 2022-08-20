@@ -42,7 +42,7 @@ eip721_bytes32_v1 = {
 
 
 class IPLDLink(BaseModel):
-    link: str = Field(..., title="/", alias="/")
+    link: str = Field(..., alias="/")
 
 
 class Content(BaseModel):
@@ -71,7 +71,13 @@ class Entry(BaseModel):
         return SignedEntry(
             **self.dict(by_alias=True),
             signer=account.address,
-            sig=account.sign_message(message).signature.hex(),
+            signature=Bytes32Signature(
+                format="eip721-bytes32-v1",
+                schema={
+                    "/": "bafyreidsag4nrh3jf6qt634gnxu25eryxoonbamlggjes7a7pmkghu2gqa"
+                },
+                sig=account.sign_message(message).signature.hex(),
+            ),
         )
 
 
@@ -105,4 +111,4 @@ class SignedEntry(Entry):
                 f"Wrong account ({account.address}): entry was signed by {signer}"
             )
         digest = CID.decode(self.cid).raw_digest.hex()
-        return bytes32_contract(w3).publish(account, head=HexBytes(digest))
+        return bytes32_contract(w3).publish(head=HexBytes(digest)).send(account)
