@@ -1,0 +1,51 @@
+version: "3"
+services:
+  relayer:
+    container_name: relayer
+    image: bytes32/relayer
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile.relayer
+  indexer:
+    container_name: indexer
+    image: bytes32/indexer
+    depends_on:
+      - solr
+    restart: on-failure
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile.indexer
+  solr:
+    image: solr:9
+    container_name: solr
+    command: solr-precreate bytes32
+    ports:
+      - 8983:8983
+    volumes:
+      - solrdata:/var/solr
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8983/solr/bytes32/admin/ping"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  ipfs:
+    container_name: ipfs
+    image: ipfs/kubo:latest
+    ports:
+      - 4001:4001
+      - 8080:8080
+    volumes:
+      - ipfsdata:/data/ipfs
+volumes:
+  solrdata:
+  ipfsdata:

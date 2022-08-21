@@ -1,0 +1,16 @@
+FROM python:3.9
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="/root/.local/bin:${PATH}"
+RUN poetry self update --preview
+
+ADD ./core /bytes32/core
+
+COPY ./relayer/poetry.lock ./relayer/pyproject.toml /bytes32/relayer/
+
+WORKDIR /bytes32/relayer
+RUN poetry config virtualenvs.create false && poetry install
+
+ADD ./relayer .
+
+CMD uvicorn relayer.service:app
