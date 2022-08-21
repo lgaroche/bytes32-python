@@ -64,7 +64,7 @@ def aggregate():
             receipt = bytes32_contract(w3).publish(head=HexBytes(digest)).send(account)
             last_tx_hashes[pkh] = receipt.transactionHash
 
-        time.sleep(5)
+        time.sleep(2)
 
 
 threading.Thread(target=aggregate, daemon=True).start()

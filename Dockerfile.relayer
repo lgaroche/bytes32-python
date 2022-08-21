@@ -13,4 +13,5 @@ RUN poetry config virtualenvs.create false && poetry install
 
 ADD ./relayer .
 
-CMD uvicorn relayer.service:app
+EXPOSE 8000
+CMD uvicorn relayer.service:app --host 0.0.0.0

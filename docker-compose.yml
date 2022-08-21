@@ -3,6 +3,8 @@ services:
   relayer:
     container_name: relayer
     image: bytes32/relayer
+    ports:
+      - 8000:8000
     env_file:
       - .env
     build:
@@ -44,6 +46,8 @@ services:
     ports:
       - 4001:4001
       - 8080:8080
+    expose:
+      - 5001
     volumes:
       - ipfsdata:/data/ipfs
 volumes:

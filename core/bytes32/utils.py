@@ -21,7 +21,7 @@ def ipfs_add_and_pin(obj):
     dag = dag_cbor.encode(stripped)
     r = requests.post(url, files={"file": dag}, headers={"Accept": "application/json"})
     if r.status_code != 200:
-        raise Exception("failed to publish on ipfs")
+        raise Exception(f"failed to publish on ipfs, got code {r.status_code}")
     return r.json()["Cid"]["/"]
 
 
