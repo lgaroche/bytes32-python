@@ -28,6 +28,7 @@ print(f"latest block number: {latest.number}")
 def get_dag(path):
     url = f"{ipfs_api}/dag/get?arg={path}"
     r = requests.post(url, headers={"Accept": "application/json"})
+    r.encoding = "utf-8"
     if r.status_code != 200:
         print(f"failed to read from ipfs (status={r.status_code}): {path}")
         raise Exception
